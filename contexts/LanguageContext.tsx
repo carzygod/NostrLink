@@ -51,6 +51,10 @@ const dictionary: Dictionary = {
     'community.cancel': 'Cancel',
     'community.whats_happening': "What's happening?",
     'community.failed': 'Failed to post message.',
+    'community.profile': 'Profile',
+    'community.my_posts': 'My posts',
+    'community.back': 'Back',
+    'community.me': 'You',
   },
   'zh-CN': {
     'app.name': 'NostrLink',
@@ -98,6 +102,10 @@ const dictionary: Dictionary = {
     'community.cancel': '取消',
     'community.whats_happening': '发生了什么？',
     'community.failed': '发布失败。',
+    'community.profile': '个人主页',
+    'community.my_posts': '我的帖子',
+    'community.back': '返回',
+    'community.me': '我',
   },
   'zh-TW': {
     'app.name': 'NostrLink',
@@ -145,6 +153,10 @@ const dictionary: Dictionary = {
     'community.cancel': '取消',
     'community.whats_happening': '發生了什麼？',
     'community.failed': '發布失敗。',
+    'community.profile': '個人頁面',
+    'community.my_posts': '我的貼文',
+    'community.back': '返回',
+    'community.me': '我',
   },
   'ru': {
     'app.name': 'NostrLink',
@@ -192,6 +204,10 @@ const dictionary: Dictionary = {
     'community.cancel': 'Отмена',
     'community.whats_happening': 'Что происходит?',
     'community.failed': 'Не удалось опубликовать сообщение.',
+    'community.profile': 'Профиль',
+    'community.my_posts': 'Мои посты',
+    'community.back': 'Назад',
+    'community.me': 'Я',
   },
 };
 

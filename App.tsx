@@ -6,6 +6,7 @@ import ChatInterface from './components/ChatInterface';
 import RelayManager from './components/RelayManager';
 import DMList from './components/DMList';
 import CommunityFeed from './components/CommunityFeed';
+import CommunityProfile from './components/CommunityProfile';
 import BottomNav from './components/BottomNav';
 import { Globe, MessageSquare, Settings, LogOut, Users } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
@@ -103,7 +104,21 @@ const App: React.FC = () => {
       case ViewState.GLOBAL_CHAT:
         return <ChatInterface keys={keys} relays={relays} mode="global" />;
       case ViewState.COMMUNITY:
-        return <CommunityFeed keys={keys} relays={relays} />;
+        return (
+          <CommunityFeed
+            keys={keys}
+            relays={relays}
+            onOpenProfile={() => setView(ViewState.COMMUNITY_PROFILE)}
+          />
+        );
+      case ViewState.COMMUNITY_PROFILE:
+        return (
+          <CommunityProfile
+            keys={keys}
+            relays={relays}
+            onBack={() => setView(ViewState.COMMUNITY)}
+          />
+        );
       case ViewState.DM_LIST:
         return <DMList keys={keys} relays={relays} onSelectContact={handleSelectContact} />;
       case ViewState.DM_CHAT:
@@ -117,7 +132,10 @@ const App: React.FC = () => {
 
   // Sidebar item for desktop
   const SidebarItem = ({ target, icon: Icon, label }: { target: ViewState; icon: any; label: string }) => {
-    const isActive = view === target || (target === ViewState.DM_LIST && view === ViewState.DM_CHAT);
+    const isActive =
+      view === target ||
+      (target === ViewState.DM_LIST && view === ViewState.DM_CHAT) ||
+      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE);
     return (
       <button
         onClick={() => setView(target)}

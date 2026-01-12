@@ -12,7 +12,10 @@ const BottomNav: React.FC<BottomNavProps> = ({ view, setView }) => {
   const { t } = useLanguage();
   
   const NavItem = ({ target, icon: Icon, label }: { target: ViewState; icon: any; label: string }) => {
-    const isActive = view === target || (target === ViewState.DM_LIST && view === ViewState.DM_CHAT);
+    const isActive =
+      view === target ||
+      (target === ViewState.DM_LIST && view === ViewState.DM_CHAT) ||
+      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE);
     return (
       <button
         onClick={() => setView(target)}

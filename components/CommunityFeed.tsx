@@ -19,9 +19,10 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface CommunityFeedProps {
   keys: UserKeys;
   relays: string[];
+  onOpenProfile: () => void;
 }
 
-const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
+const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays, onOpenProfile }) => {
   const [events, setEvents] = useState<NostrEvent[]>([]);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
@@ -148,12 +149,13 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
             <h2 className="text-xl font-bold text-white">{t('community.title')}</h2>
             <p className="text-[10px] text-slate-500">{t('community.live')} {relays.length} Relays</p>
         </div>
-        <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
-           {/* Current user avatar placeholder */}
-           <div className="w-full h-full flex items-center justify-center text-slate-500">
-             <User size={16} />
-           </div>
-        </div>
+        <button
+          onClick={onOpenProfile}
+          className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-500 transition"
+          aria-label={t('community.profile')}
+        >
+          <User size={16} />
+        </button>
       </div>
 
       {/* Feed List */}
