@@ -44,7 +44,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
         subFilters = [{ kinds: [1], limit: 50 }];
     } else if (mode === 'dm' && targetPubkey) {
         subFilters = [
-            { kinds: [4], '#p': [keys.pk], authors: [targetPubkey], limit: 50 }, // Received
+            { kinds: [4], authors: [targetPubkey], limit: 50 }, // Received (filter by author)
             { kinds: [4], '#p': [targetPubkey], authors: [keys.pk], limit: 50 }  // Sent
         ];
     }
@@ -56,7 +56,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
     }
 
     // Subscribe
+    const isDmEventForTarget = (event: NostrEvent, target: string) => {
+      if (event.kind !== 4) return false;
+      const recipient = event.tags.find((tag) => tag[0] === 'p')?.[1];
+      if (event.pubkey === keys.pk) {
+        return recipient === target;
+      }
+      return event.pubkey === target && recipient === keys.pk;
+    };
+
     const handleEvent = async (event: NostrEvent) => {
+        if (mode === 'dm' && targetPubkey && !isDmEventForTarget(event, targetPubkey)) {
+          return;
+        }
         let content = event.content;
         let isEncrypted = event.kind === 4;
 
