@@ -109,7 +109,7 @@ const App: React.FC = () => {
       case ViewState.DM_CHAT:
         return <ChatInterface keys={keys} relays={relays} mode="dm" targetPubkey={dmTarget} />;
       case ViewState.SETTINGS:
-        return <RelayManager relays={relays} setRelays={updateRelays} />;
+        return <RelayManager relays={relays} setRelays={updateRelays} keys={keys} />;
       default:
         return <ChatInterface keys={keys} relays={relays} mode="global" />;
     }

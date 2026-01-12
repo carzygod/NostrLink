@@ -16,12 +16,14 @@ const KeyManagement: React.FC<KeyManagementProps> = ({ onLogin }) => {
   const { t } = useLanguage();
 
   const handleLogin = () => {
-    if (!nsecInput.startsWith('nsec')) {
+    const trimmed = nsecInput.trim();
+    if (!trimmed.startsWith('nsec')) {
       setError(t('login.error.format'));
       return;
     }
-    const keys = loadKeysFromString(nsecInput);
+    const keys = loadKeysFromString(trimmed);
     if (keys) {
+      setError('');
       onLogin(keys);
     } else {
       setError(t('login.error.invalid'));
@@ -29,10 +31,15 @@ const KeyManagement: React.FC<KeyManagementProps> = ({ onLogin }) => {
   };
 
   const handleGenerate = () => {
-    const keys = generateKeys();
-    setGenerated(keys);
-    setNsecInput(keys.nsec);
-    setError('');
+    try {
+      const keys = generateKeys();
+      setGenerated(keys);
+      setNsecInput(keys.nsec);
+      setError('');
+    } catch (e) {
+      console.error("Failed to generate keys", e);
+      setError(t('login.error.invalid'));
+    }
   };
 
   const copyToClipboard = () => {

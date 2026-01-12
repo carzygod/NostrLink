@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserKeys, NostrEvent, UserProfile } from '../types';
 import { getPool, fetchProfiles, publishNote } from '../services/nostrService';
-import { nip19, Filter } from 'nostr-tools';
+import { nip19, Filter, validateEvent, verifyEvent } from 'nostr-tools';
 import { 
   MessageCircle, 
   Repeat2, 
@@ -39,14 +39,17 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
     setLoading(true);
     setEvents([]);
     
-    console.log("📡 [Community] Subscribing to relays:", relays);
+    console.log("[Community] Subscribing to relays:", relays);
 
     // Subscribe to Kind 1 (Text Notes)
     const filters: Filter[] = [{ kinds: [1], limit: 25 }];
     const sub = pool.subscribeMany(relays, filters, {
       onevent: (event) => {
+        if (!validateEvent(event) || !verifyEvent(event)) {
+          return;
+        }
         // Log the received event data to console as requested
-        console.log("📨 [Relay Event Received]", {
+        console.log("[Relay Event Received]", {
           id: event.id,
           pubkey: event.pubkey,
           kind: event.kind,
@@ -62,7 +65,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
         });
       },
       oneose: () => {
-        console.log("✅ [Community] EOSE: Initial load complete.");
+        console.log("[Community] EOSE: Initial load complete.");
         setLoading(false);
       }
     });
@@ -90,7 +93,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
         // Mark as requested to prevent dupes
         missing.forEach(p => requestedProfiles.current.add(p));
         
-        console.log(`👤 [Community] Fetching metadata for ${missing.length} authors...`);
+        console.log(`[Community] Fetching metadata for ${missing.length} authors...`);
         const newProfiles = await fetchProfiles(relays, missing);
         
         setProfiles(prev => ({ ...prev, ...newProfiles }));
@@ -108,13 +111,13 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
     if (!newPostContent.trim()) return;
     setIsPosting(true);
     try {
-      console.log("📤 [Community] Publishing note...");
+      console.log("[Community] Publishing note...");
       await publishNote(keys, relays, newPostContent);
-      console.log("✅ [Community] Published successfully.");
+      console.log("[Community] Published successfully.");
       setNewPostContent('');
       setShowPostModal(false);
     } catch (e) {
-      console.error("❌ [Community] Failed to post:", e);
+      console.error("[Community] Failed to post:", e);
       alert(t('community.failed'));
     } finally {
       setIsPosting(false);
@@ -197,7 +200,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-bold text-slate-100 truncate text-sm md:text-base">{displayName}</span>
                       <span className="text-slate-500 text-xs truncate max-w-[80px] md:max-w-none">{handle}</span>
-                      <span className="text-slate-600 text-[10px]">•</span>
+                      <span className="text-slate-600 text-[10px]">-</span>
                       <span className="text-slate-500 text-xs whitespace-nowrap">
                         {getRelativeTime(event.created_at)}
                       </span>
@@ -294,3 +297,4 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
 };
 
 export default CommunityFeed;
+

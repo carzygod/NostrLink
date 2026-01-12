@@ -5,7 +5,9 @@ import {
   nip19, 
   SimplePool, 
   nip04,
-  Filter
+  Filter,
+  validateEvent,
+  verifyEvent
 } from 'nostr-tools';
 import { NostrEvent, UserKeys, RelayMetric, UserProfile } from '../types';
 
@@ -14,24 +16,44 @@ export const DEFAULT_RELAYS = [
   'wss://relay.damus.io'
 ];
 
-// Helper to encode/decode keys
-export const generateKeys = (): UserKeys => {
-  const sk = generateSecretKey();
+const areUint8ArraysEqual = (a: Uint8Array, b: Uint8Array): boolean => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
+const buildKeysFromSecret = (sk: Uint8Array): UserKeys | null => {
+  if (!(sk instanceof Uint8Array) || sk.length !== 32) {
+    return null;
+  }
   const pk = getPublicKey(sk);
   const nsec = nip19.nsecEncode(sk);
   const npub = nip19.npubEncode(pk);
+  const decoded = nip19.decode(nsec);
+  if (decoded.type !== 'nsec') return null;
+  const decodedSk = decoded.data as Uint8Array;
+  if (!areUint8ArraysEqual(decodedSk, sk)) return null;
   return { sk, pk, nsec, npub };
+};
+
+// Helper to encode/decode keys
+export const generateKeys = (): UserKeys => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const sk = generateSecretKey();
+    const keys = buildKeysFromSecret(sk);
+    if (keys) return keys;
+  }
+  throw new Error("Failed to generate a valid Nostr keypair");
 };
 
 export const loadKeysFromString = (nsecInput: string): UserKeys | null => {
   try {
-    const { type, data } = nip19.decode(nsecInput);
+    const trimmed = nsecInput.trim();
+    const { type, data } = nip19.decode(trimmed);
     if (type === 'nsec') {
-      const sk = data as Uint8Array;
-      const pk = getPublicKey(sk);
-      const nsec = nip19.nsecEncode(sk);
-      const npub = nip19.npubEncode(pk);
-      return { sk, pk, nsec, npub };
+      return buildKeysFromSecret(data as Uint8Array);
     }
     return null;
   } catch (e) {
@@ -132,6 +154,9 @@ export const publishNote = async (
   }
 
   const signedEvent = finalizeEvent(eventTemplate, keys.sk);
+  if (!validateEvent(signedEvent) || !verifyEvent(signedEvent)) {
+    throw new Error("Failed to validate or verify event before publish");
+  }
   
   // Attempt to publish to all relays, succeed if at least one accepts
   try {
@@ -164,6 +189,9 @@ export const publishEncryptedDM = async (
   };
 
   const signedEvent = finalizeEvent(eventTemplate, keys.sk);
+  if (!validateEvent(signedEvent) || !verifyEvent(signedEvent)) {
+    throw new Error("Failed to validate or verify DM before publish");
+  }
 
   try {
     await waitForAny(_pool.publish(relays, signedEvent));
@@ -228,6 +256,7 @@ export const fetchProfiles = async (
 
       events.forEach(event => {
         try {
+          if (!validateEvent(event) || !verifyEvent(event)) return;
           const content = JSON.parse(event.content);
           profiles[event.pubkey] = {
             pubkey: event.pubkey,
