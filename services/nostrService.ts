@@ -13,7 +13,7 @@ import { NostrEvent, UserKeys, RelayMetric, UserProfile } from '../types';
 
 // Default Relays - Updated to only include relay.damus.io as requested
 export const DEFAULT_RELAYS = [
-  'wss://relay.damus.io'
+  'wss://nos.lol'
 ];
 
 const areUint8ArraysEqual = (a: Uint8Array, b: Uint8Array): boolean => {
