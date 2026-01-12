@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserKeys, DMConversation, UserProfile } from '../types';
+import { UserKeys, DMConversation, UserProfile, NostrEvent } from '../types';
 import { getPool, decryptMessage, fetchProfiles } from '../services/nostrService';
 import { nip19, Filter, ProfilePointer } from 'nostr-tools';
 import { MessageSquare, ArrowRight, UserPlus, Search, Loader2, User } from 'lucide-react';
@@ -29,78 +29,92 @@ const DMList: React.FC<DMListProps> = ({ keys, relays, onSelectContact }) => {
 
       // We need to fetch sent and received messages
       // Filter limits are tricky. We ask for recent 100 of each.
-      const filters: Filter[] = [
-        { kinds: [4], '#p': [keys.pk], limit: 100 }, // Received
-        { kinds: [4], authors: [keys.pk], limit: 100 } // Sent
-      ];
+      const receivedFilter: Filter = { kinds: [4], '#p': [keys.pk], limit: 100 }; // Received
+      const sentFilter: Filter = { kinds: [4], authors: [keys.pk], limit: 100 }; // Sent
 
       // Temporary storage for raw events before processing
       const rawEvents: any[] = [];
 
-      const sub = pool.subscribeMany(relays, filters, {
-        onevent: (event) => {
-          rawEvents.push(event);
-        },
-        oneose: async () => {
-          if (!isMounted) return;
+      let eoseCount = 0;
+      let isResolved = false;
 
-          // Process raw events to find unique conversations
-          for (const event of rawEvents) {
-            const isMe = event.pubkey === keys.pk;
-            const otherPubkey = isMe 
-              ? event.tags.find((t: string[]) => t[0] === 'p')?.[1] 
-              : event.pubkey;
+      const finalize = async () => {
+        if (!isMounted || isResolved) return;
+        isResolved = true;
 
-            if (!otherPubkey) continue;
+        // Process raw events to find unique conversations
+        for (const event of rawEvents) {
+          const isMe = event.pubkey === keys.pk;
+          const otherPubkey = isMe 
+            ? event.tags.find((t: string[]) => t[0] === 'p')?.[1] 
+            : event.pubkey;
 
-            const existing = dmMap.get(otherPubkey);
-            if (!existing || event.created_at > existing.created_at) {
-              dmMap.set(otherPubkey, event);
-            }
+          if (!otherPubkey) continue;
+
+          const existing = dmMap.get(otherPubkey);
+          if (!existing || event.created_at > existing.created_at) {
+            dmMap.set(otherPubkey, event);
           }
-
-          // Convert map to array and fetch profiles
-          const uniquePubkeys = Array.from(dmMap.keys());
-          const profiles = await fetchProfiles(relays, uniquePubkeys);
-
-          const convos: DMConversation[] = [];
-
-          for (const pubkey of uniquePubkeys) {
-            const event = dmMap.get(pubkey);
-            let content = "Encrypted Message";
-            
-            try {
-              // Decrypt preview
-              const decryptKey = event.pubkey === keys.pk ? pubkey : event.pubkey;
-              content = await decryptMessage(keys, decryptKey, event.content);
-            } catch (e) {
-               // ignore
-            }
-
-            convos.push({
-              pubkey,
-              lastMessageTime: event.created_at,
-              lastMessageContent: content,
-              profile: profiles[pubkey]
-            });
-          }
-
-          // Sort by latest message
-          convos.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-          
-          if (isMounted) {
-            setConversations(convos);
-            setLoading(false);
-          }
-          sub.close();
         }
-      });
+
+        // Convert map to array and fetch profiles
+        const uniquePubkeys = Array.from(dmMap.keys());
+        const profiles = await fetchProfiles(relays, uniquePubkeys);
+
+        const convos: DMConversation[] = [];
+
+        for (const pubkey of uniquePubkeys) {
+          const event = dmMap.get(pubkey);
+          let content = "Encrypted Message";
+          
+          try {
+            // Decrypt preview
+            const decryptKey = event.pubkey === keys.pk ? pubkey : event.pubkey;
+            content = await decryptMessage(keys, decryptKey, event.content);
+          } catch (e) {
+             // ignore
+          }
+
+          convos.push({
+            pubkey,
+            lastMessageTime: event.created_at,
+            lastMessageContent: content,
+            profile: profiles[pubkey]
+          });
+        }
+
+        // Sort by latest message
+        convos.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+        
+        if (isMounted) {
+          setConversations(convos);
+          setLoading(false);
+        }
+      };
+
+      const handleEvent = (event: NostrEvent) => {
+        rawEvents.push(event);
+      };
+
+      const handleEose = async () => {
+        if (!isMounted) return;
+        eoseCount += 1;
+        if (eoseCount >= 2) {
+          await finalize();
+          subs.forEach((sub) => sub.close());
+        }
+      };
+
+      const subs = [
+        pool.subscribeMany(relays, receivedFilter, { onevent: handleEvent, oneose: handleEose }),
+        pool.subscribeMany(relays, sentFilter, { onevent: handleEvent, oneose: handleEose })
+      ];
       
       // Fallback timeout in case oneose never fires (rare but possible with some relays)
       setTimeout(() => {
         if(isMounted && loading) {
-           sub.close();
-           setLoading(false);
+           subs.forEach((sub) => sub.close());
+           finalize().catch(() => {});
         }
       }, 5000);
     };

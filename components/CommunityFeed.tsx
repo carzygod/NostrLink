@@ -42,8 +42,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays }) => {
     console.log("[Community] Subscribing to relays:", relays);
 
     // Subscribe to Kind 1 (Text Notes)
-    const filters: Filter[] = [{ kinds: [1], limit: 25 }];
-    const sub = pool.subscribeMany(relays, filters, {
+    const filter: Filter = { kinds: [1], limit: 25 };
+    const sub = pool.subscribeMany(relays, filter, {
       onevent: (event) => {
         if (!validateEvent(event) || !verifyEvent(event)) {
           return;

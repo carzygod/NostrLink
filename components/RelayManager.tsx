@@ -1,5 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Plus, RefreshCw, Activity, AlertCircle, Languages, Copy, Check } from 'lucide-react';
+import { utils } from 'nostr-tools';
 import { checkRelayHealth } from '../services/nostrService';
 import { RelayMetric, Language, UserKeys } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -16,6 +17,7 @@ const RelayManager: React.FC<RelayManagerProps> = ({ relays, setRelays, keys }) 
   const [checking, setChecking] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [copiedPrivateKey, setCopiedPrivateKey] = useState(false);
+  const [relayError, setRelayError] = useState('');
   const { t, language, setLanguage } = useLanguage();
 
   useEffect(() => {
@@ -41,9 +43,17 @@ const RelayManager: React.FC<RelayManagerProps> = ({ relays, setRelays, keys }) 
   };
 
   const addRelay = () => {
-    if (newRelay && newRelay.startsWith('wss://') && !relays.includes(newRelay)) {
-      setRelays([...relays, newRelay]);
+    const trimmed = newRelay.trim();
+    if (!trimmed) return;
+    try {
+      const normalized = utils.normalizeURL(trimmed);
+      if (!relays.includes(normalized)) {
+        setRelays([...relays, normalized]);
+      }
       setNewRelay('');
+      setRelayError('');
+    } catch (e) {
+      setRelayError(t('settings.relay_invalid'));
     }
   };
 
@@ -62,9 +72,9 @@ const RelayManager: React.FC<RelayManagerProps> = ({ relays, setRelays, keys }) 
 
   const languages: { code: Language; label: string }[] = [
     { code: 'en', label: 'English' },
-    { code: 'zh-CN', label: '????' },
-    { code: 'zh-TW', label: '????' },
-    { code: 'ru', label: '???????' },
+    { code: 'zh-CN', label: '\u7B80\u4F53\u4E2D\u6587' },
+    { code: 'zh-TW', label: '\u7E41\u9AD4\u4E2D\u6587' },
+    { code: 'ru', label: '\u0420\u0443\u0441\u0441\u043A\u0438\u0439' },
   ];
 
   return (
@@ -153,18 +163,25 @@ const RelayManager: React.FC<RelayManagerProps> = ({ relays, setRelays, keys }) 
           <input
             type="text"
             value={newRelay}
-            onChange={(e) => setNewRelay(e.target.value)}
+            onChange={(e) => {
+              setNewRelay(e.target.value);
+              if (relayError) setRelayError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addRelay();
+            }}
             placeholder="wss://..."
             className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
           />
           <button
             onClick={addRelay}
-            disabled={!newRelay.startsWith('wss://')}
+            disabled={!newRelay.trim()}
             className="bg-indigo-600 disabled:bg-slate-700 disabled:text-slate-500 text-white p-2 rounded-lg hover:bg-indigo-700 transition"
           >
             <Plus size={20} />
           </button>
         </div>
+        {relayError && <p className="text-xs text-red-400 mt-2">{relayError}</p>}
       </div>
 
       <div className="space-y-3">

@@ -228,11 +228,11 @@ export const fetchProfiles = async (
       
       const events = await new Promise<any[]>((resolve) => {
         const fetchedEvents: any[] = [];
-        const filters: Filter[] = [{
+        const filter: Filter = {
           kinds: [0],
           authors: pubkeys
-        }];
-        const sub = _pool.subscribeMany(relays, filters, {
+        };
+        const sub = _pool.subscribeMany(relays, filter, {
           onevent: (event) => {
             fetchedEvents.push(event);
           },

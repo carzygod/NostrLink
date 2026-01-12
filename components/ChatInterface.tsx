@@ -56,8 +56,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
     }
 
     // Subscribe
-    const sub = pool.subscribeMany(relays, subFilters, {
-      onevent: async (event: NostrEvent) => {
+    const handleEvent = async (event: NostrEvent) => {
         let content = event.content;
         let isEncrypted = event.kind === 4;
 
@@ -88,12 +87,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
           return updated;
         });
         setStatus('idle');
-      },
-      oneose: () => {
-        // End of stored events
-        if (messages.length === 0) setStatus('idle');
-      }
-    });
+      };
+
+    const handleEose = () => {
+      // End of stored events
+      if (messages.length === 0) setStatus('idle');
+    };
+
+    const subs = subFilters.map((filter) => 
+      pool.subscribeMany(relays, filter, {
+        onevent: handleEvent,
+        oneose: handleEose
+      })
+    );
 
     // Safety timeout to remove loading state if relays are slow/empty
     const timeout = setTimeout(() => {
@@ -101,7 +107,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
     }, 2000);
 
     return () => {
-      sub.close();
+      subs.forEach((sub) => sub.close());
       clearTimeout(timeout);
     };
   }, [relays, mode, targetPubkey, keys]);
