@@ -1,0 +1,5 @@
+{
+  "name": "NostrLink",
+  "description": "A mobile-first, secure, end-to-end encrypted chat platform built on the Nostr protocol. Supports DMs, Group channels, and custom relay management.",
+  "requestFramePermissions": []
+}
