@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { UserKeys, NostrEvent, ChannelInfo } from '../types';
 import { getPool, publishChannelMessage } from '../services/nostrService';
+import { uploadToR2 } from '../services/uploadService';
+import { buildMessageContent } from '../utils/messagePayload';
+import MessageContent from './MessageContent';
 import { Filter, nip19, validateEvent, verifyEvent } from 'nostr-tools';
-import { ArrowLeft, Send, Users, Loader2, AlertTriangle, Share2 } from 'lucide-react';
+import { ArrowLeft, Send, Users, Loader2, AlertTriangle, Share2, Image, Video, Mic, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -16,12 +19,19 @@ interface GroupChatProps {
 const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }) => {
   const [messages, setMessages] = useState<NostrEvent[]>([]);
   const [inputText, setInputText] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState<'loading' | 'idle' | 'sending' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
   const pool = getPool();
   const { t } = useLanguage();
   const joinedStorageKey = 'nostr_joined_channels';
@@ -33,6 +43,16 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   useEffect(() => {
     scrollToBottom();
   }, [messages.length, status]);
+
+  useEffect(() => {
+    return () => {
+      const recorder = recorderRef.current;
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+      recorder?.stream.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   useEffect(() => {
     const createFilter: Filter = { kinds: [40], ids: [channelId] };
@@ -106,13 +126,33 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   }, [relays, channelId]);
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
-    const textToSend = inputText;
+    const trimmed = inputText.trim();
+    if (!trimmed && pendingFiles.length === 0) return;
+    const textToSend = trimmed;
+    const filesToSend = [...pendingFiles];
     setInputText('');
+    setPendingFiles([]);
     setStatus('sending');
     setErrorMsg('');
+
+    let attachments = [];
+    if (filesToSend.length > 0) {
+      try {
+        attachments = await Promise.all(filesToSend.map((file) => uploadToR2(file)));
+      } catch (e) {
+        console.error("Upload failed", e);
+        setStatus('error');
+        setErrorMsg(t('chat.upload_failed'));
+        setInputText(textToSend);
+        setPendingFiles(filesToSend);
+        return;
+      }
+    }
+
+    const contentToSend = attachments.length > 0 ? buildMessageContent(textToSend, attachments) : textToSend;
+
     try {
-      await publishChannelMessage(keys, relays, channelId, textToSend);
+      await publishChannelMessage(keys, relays, channelId, contentToSend);
       setStatus('idle');
       scrollToBottom();
     } catch (e) {
@@ -120,6 +160,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
       setStatus('error');
       setErrorMsg(t('group.send_failed'));
       setInputText(textToSend);
+      setPendingFiles(filesToSend);
     }
   };
 
@@ -128,6 +169,71 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
       return nip19.npubEncode(hex).slice(0, 8) + '...';
     } catch {
       return hex.slice(0, 6);
+    }
+  };
+
+  const addFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...Array.from(files)]);
+  };
+
+  const removeFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getRecordingMimeType = () => {
+    const options = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg'
+    ];
+    for (const option of options) {
+      if (MediaRecorder.isTypeSupported(option)) return option;
+    }
+    return '';
+  };
+
+  const getRecordingExtension = (mimeType: string) => {
+    if (mimeType.includes('ogg')) return 'ogg';
+    return 'webm';
+  };
+
+  const handleRecordingToggle = async () => {
+    if (recording) {
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+      setRecording(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = getRecordingMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      recordingChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordingChunksRef.current, { type: mimeType || 'audio/webm' });
+        const ext = getRecordingExtension(blob.type);
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blob.type });
+        setPendingFiles((prev) => [...prev, file]);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch (e) {
+      console.error("Recording failed", e);
+      setStatus('error');
+      setErrorMsg(t('chat.record_failed'));
     }
   };
 
@@ -216,7 +322,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
                     <span className="text-[10px] font-mono font-medium text-indigo-200">{formatPubKey(msg.pubkey)}</span>
                   </div>
                 )}
-                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+                <MessageContent content={msg.content} />
                 <div className="flex items-center justify-end gap-1 mt-1">
                   <p className={`text-[10px] ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>
                     {format(new Date(msg.created_at * 1000), 'h:mm a')}
@@ -239,6 +345,93 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
           </div>
         )}
 
+        {pendingFiles.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {pendingFiles.map((file, idx) => (
+              <div key={`${file.name}-${idx}`} className="flex items-center gap-2 bg-slate-900/70 border border-slate-700 rounded-full px-3 py-1 text-xs text-slate-200">
+                <span className="max-w-[160px] truncate">{file.name}</span>
+                <button
+                  onClick={() => removeFile(idx)}
+                  className="text-slate-400 hover:text-white transition"
+                  aria-label={t('chat.remove_attachment')}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            disabled={status === 'sending'}
+            className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
+            title={t('chat.add_image')}
+          >
+            <Image size={16} />
+          </button>
+          <button
+            onClick={() => videoInputRef.current?.click()}
+            disabled={status === 'sending'}
+            className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
+            title={t('chat.add_video')}
+          >
+            <Video size={16} />
+          </button>
+          <button
+            onClick={() => audioInputRef.current?.click()}
+            disabled={status === 'sending'}
+            className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
+            title={t('chat.add_audio')}
+          >
+            <Mic size={16} />
+          </button>
+          <button
+            onClick={handleRecordingToggle}
+            disabled={status === 'sending'}
+            className={`p-2 rounded-full border transition ${
+              recording
+                ? 'bg-red-500/20 border-red-500 text-red-300 hover:text-white'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500'
+            }`}
+            title={recording ? t('chat.stop_recording') : t('chat.record_voice')}
+          >
+            <Mic size={16} />
+          </button>
+          {recording && <span className="text-xs text-red-300">{t('chat.recording')}</span>}
+        </div>
+
         <div className="flex gap-2">
           <input
             type="text"
@@ -251,13 +444,13 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
           />
           <button
             onClick={handleSend}
-            disabled={!inputText.trim() || status === 'sending'}
+            disabled={(status === 'sending') || (!inputText.trim() && pendingFiles.length === 0)}
             className="bg-indigo-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20"
           >
             {status === 'sending' ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
-              <Send size={18} className={inputText.trim() ? "translate-x-0.5" : ""} />
+              <Send size={18} className={inputText.trim() || pendingFiles.length > 0 ? "translate-x-0.5" : ""} />
             )}
           </button>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserKeys, DMConversation, UserProfile, NostrEvent } from '../types';
 import { getPool, decryptMessage, fetchProfiles } from '../services/nostrService';
+import { parseMessagePayload } from '../utils/messagePayload';
 import { nip19, Filter, ProfilePointer } from 'nostr-tools';
 import { MessageSquare, ArrowRight, UserPlus, Search, Loader2, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -75,10 +76,27 @@ const DMList: React.FC<DMListProps> = ({ keys, relays, onSelectContact }) => {
              // ignore
           }
 
+          const parsed = parseMessagePayload(content);
+          let preview = parsed.text || content;
+          if (!parsed.text && parsed.attachments.length > 0) {
+            const kind = parsed.attachments[0].kind;
+            preview =
+              kind === 'image'
+                ? t('chat.preview_image')
+                : kind === 'video'
+                  ? t('chat.preview_video')
+                  : kind === 'audio'
+                    ? t('chat.preview_audio')
+                    : t('chat.preview_file');
+            if (parsed.attachments.length > 1) {
+              preview = `${preview} +${parsed.attachments.length - 1}`;
+            }
+          }
+
           convos.push({
             pubkey,
             lastMessageTime: event.created_at,
-            lastMessageContent: content,
+            lastMessageContent: preview,
             profile: profiles[pubkey]
           });
         }
