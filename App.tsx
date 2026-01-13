@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserKeys, ViewState } from './types';
 import { DEFAULT_RELAYS, loadKeysFromString } from './services/nostrService';
 import KeyManagement from './components/KeyManagement';
@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [dmTarget, setDmTarget] = useState<string | undefined>(undefined);
   const [groupChannelId, setGroupChannelId] = useState<string | undefined>(undefined);
   const { t } = useLanguage();
+  const handledShareLink = useRef(false);
 
   // Load keys from localStorage on mount
   useEffect(() => {
@@ -72,6 +73,17 @@ const App: React.FC = () => {
       setRelays(JSON.parse(storedRelays));
     }
   }, []);
+
+  useEffect(() => {
+    if (!keys || handledShareLink.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const channelParam = params.get('channel');
+    if (channelParam && /^[a-f0-9]{64}$/i.test(channelParam)) {
+      setGroupChannelId(channelParam);
+      setView(ViewState.GROUP_CHAT);
+    }
+    handledShareLink.current = true;
+  }, [keys]);
 
   const handleLogin = (newKeys: UserKeys) => {
     setKeys(newKeys);

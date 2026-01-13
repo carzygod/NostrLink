@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { UserKeys, NostrEvent, ChannelInfo } from '../types';
 import { getPool, publishChannelMessage } from '../services/nostrService';
 import { Filter, nip19, validateEvent, verifyEvent } from 'nostr-tools';
-import { ArrowLeft, Send, Users, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Users, Loader2, AlertTriangle, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -19,9 +19,12 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   const [status, setStatus] = useState<'loading' | 'idle' | 'sending' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pool = getPool();
   const { t } = useLanguage();
+  const joinedStorageKey = 'nostr_joined_channels';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,6 +58,22 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
     ];
     return () => subs.forEach((sub) => sub.close());
   }, [relays, channelId]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(joinedStorageKey);
+    try {
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed) && !parsed.includes(channelId)) {
+        const next = [channelId, ...parsed];
+        localStorage.setItem(joinedStorageKey, JSON.stringify(next));
+      }
+      if (!stored) {
+        localStorage.setItem(joinedStorageKey, JSON.stringify([channelId]));
+      }
+    } catch {
+      localStorage.setItem(joinedStorageKey, JSON.stringify([channelId]));
+    }
+  }, [channelId]);
 
   useEffect(() => {
     setMessages([]);
@@ -112,6 +131,24 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
     }
   };
 
+  const members = React.useMemo(() => {
+    const set = new Set<string>();
+    set.add(keys.pk);
+    messages.forEach((msg) => set.add(msg.pubkey));
+    return Array.from(set.values());
+  }, [messages, keys.pk]);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}?channel=${channelId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
   const displayName = channelInfo?.name || t('group.unnamed');
 
   return (
@@ -124,9 +161,13 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-400">
+        <button
+          onClick={() => setShowInfo(true)}
+          className="p-2 rounded-full bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition"
+          aria-label={t('group.info')}
+        >
           <Users size={20} />
-        </div>
+        </button>
         <div className="flex-1">
           <h2 className="font-semibold text-white">{displayName}</h2>
           <p className="text-xs text-slate-400">{channelInfo?.about || channelId.slice(0, 12)}</p>
@@ -212,6 +253,52 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
           </button>
         </div>
       </div>
+
+      {showInfo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl p-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
+              <h3 className="text-sm font-semibold text-white">{t('group.info')}</h3>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                {t('group.close')}
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-slate-200">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">{t('group.name')}</p>
+                <p className="text-slate-100">{channelInfo?.name || t('group.unnamed')}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">{t('group.about')}</p>
+                <p className="text-slate-100">{channelInfo?.about || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">{t('group.channel_id')}</p>
+                <p className="text-slate-100 font-mono break-all">{channelId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-2">{t('group.members')} {members.length}</p>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {members.map((member) => (
+                    <p key={member} className="text-xs font-mono text-slate-300">{formatPubKey(member)}</p>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleShare}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
+              >
+                <Share2 size={16} />
+                {copied ? t('group.link_copied') : t('group.share')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
