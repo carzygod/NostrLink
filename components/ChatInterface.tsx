@@ -4,7 +4,7 @@ import { getPool, publishNote, publishEncryptedDM, decryptMessage } from '../ser
 import { uploadToR2 } from '../services/uploadService';
 import { buildMessageContent } from '../utils/messagePayload';
 import MessageContent from './MessageContent';
-import { Send, User, Lock, Globe, Loader2, AlertTriangle, Image, Video, Mic, X } from 'lucide-react';
+import { Send, User, Lock, Globe, Loader2, AlertTriangle, Image, Video, Mic, X, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { nip19, Filter } from 'nostr-tools';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -21,13 +21,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
   const [inputText, setInputText] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [recording, setRecording] = useState(false);
+  const [mediaPicker, setMediaPicker] = useState<'image' | 'video' | null>(null);
   const [status, setStatus] = useState<'loading' | 'idle' | 'sending' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageCameraRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const videoCameraRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const pool = getPool();
@@ -364,9 +368,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
             }}
           />
           <input
+            ref={imageCameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+          <input
             ref={videoInputRef}
             type="file"
             accept="video/*"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+          <input
+            ref={videoCameraRef}
+            type="file"
+            accept="video/*"
+            capture="environment"
             className="hidden"
             onChange={(e) => {
               addFiles(e.target.files);
@@ -383,8 +409,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
               e.currentTarget.value = '';
             }}
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
           <button
-            onClick={() => imageInputRef.current?.click()}
+            onClick={() => setMediaPicker('image')}
             disabled={status === 'sending'}
             className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
             title={t('chat.add_image')}
@@ -392,7 +427,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
             <Image size={16} />
           </button>
           <button
-            onClick={() => videoInputRef.current?.click()}
+            onClick={() => setMediaPicker('video')}
             disabled={status === 'sending'}
             className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
             title={t('chat.add_video')}
@@ -406,6 +441,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
             title={t('chat.add_audio')}
           >
             <Mic size={16} />
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={status === 'sending'}
+            className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
+            title={t('chat.add_file')}
+          >
+            <Paperclip size={16} />
           </button>
           <button
             onClick={handleRecordingToggle}
@@ -445,6 +488,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ keys, relays, mode, targe
           </button>
         </div>
       </div>
+
+      {mediaPicker && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 w-full max-w-xs rounded-2xl border border-slate-700 shadow-2xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-white">
+              {mediaPicker === 'image' ? t('chat.add_image') : t('chat.add_video')}
+            </h3>
+            <button
+              onClick={() => {
+                setMediaPicker(null);
+                if (mediaPicker === 'image') imageInputRef.current?.click();
+                if (mediaPicker === 'video') videoInputRef.current?.click();
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 py-2 rounded-lg transition"
+            >
+              {t('chat.choose_file')}
+            </button>
+            <button
+              onClick={() => {
+                setMediaPicker(null);
+                if (mediaPicker === 'image') imageCameraRef.current?.click();
+                if (mediaPicker === 'video') videoCameraRef.current?.click();
+              }}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition"
+            >
+              {mediaPicker === 'image' ? t('chat.take_photo') : t('chat.take_video')}
+            </button>
+            <button
+              onClick={() => setMediaPicker(null)}
+              className="w-full bg-slate-800/70 hover:bg-slate-700 text-slate-300 py-2 rounded-lg transition"
+            >
+              {t('chat.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
