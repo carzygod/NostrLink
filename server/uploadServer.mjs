@@ -1,10 +1,14 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const envPath = fileURLToPath(new URL('./.env', import.meta.url));
+dotenv.config({ path: envPath });
 
 const {
   R2_ACCOUNT_ID,
