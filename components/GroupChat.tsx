@@ -132,10 +132,19 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   };
 
   const members = React.useMemo(() => {
-    const set = new Set<string>();
-    set.add(keys.pk);
-    messages.forEach((msg) => set.add(msg.pubkey));
-    return Array.from(set.values());
+    const recent = [...messages].sort((a, b) => b.created_at - a.created_at).slice(0, 50);
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    recent.forEach((msg) => {
+      if (!seen.has(msg.pubkey)) {
+        seen.add(msg.pubkey);
+        ordered.push(msg.pubkey);
+      }
+    });
+    if (!seen.has(keys.pk)) {
+      ordered.unshift(keys.pk);
+    }
+    return ordered;
   }, [messages, keys.pk]);
 
   const handleShare = async () => {
@@ -281,7 +290,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
                 <p className="text-slate-100 font-mono break-all">{channelId}</p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-2">{t('group.members')} {members.length}</p>
+                <p className="text-xs text-slate-500 mb-2">{t('group.members_recent')} {members.length}</p>
                 <div className="max-h-40 overflow-y-auto space-y-1">
                   {members.map((member) => (
                     <p key={member} className="text-xs font-mono text-slate-300">{formatPubKey(member)}</p>
