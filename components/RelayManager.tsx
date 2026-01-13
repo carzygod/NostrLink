@@ -115,7 +115,7 @@ const RelayManager: React.FC<RelayManagerProps> = ({ relays, setRelays, keys }) 
             </button>
           </div>
           <p className="text-xs font-mono text-slate-200 break-all bg-slate-900/60 border border-slate-700 rounded-lg p-2">
-            {keys.nsec}
+            ***
           </p>
           <p className="text-xs text-amber-400 mt-2">{t('settings.private_key_warning')}</p>
         </div>
