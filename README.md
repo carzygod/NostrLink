@@ -1,4 +1,5 @@
 ﻿# NostrLink
+<img width="1024" height="1024" alt="logo" src="https://github.com/user-attachments/assets/8e167810-3504-42bd-9c9b-98972e5500f0" />
 
 NostrLink is a lightweight Nostr chat client built with React + Vite. It supports:
 - Nostr key generation/login (NIP-19)
