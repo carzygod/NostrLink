@@ -28,6 +28,8 @@ export enum ViewState {
   GLOBAL_CHAT = 'GLOBAL_CHAT',
   COMMUNITY = 'COMMUNITY',
   COMMUNITY_PROFILE = 'COMMUNITY_PROFILE',
+  GROUP_LIST = 'GROUP_LIST',
+  GROUP_CHAT = 'GROUP_CHAT',
   DM_LIST = 'DM_LIST',
   DM_CHAT = 'DM_CHAT',
   SETTINGS = 'SETTINGS'
@@ -51,6 +53,14 @@ export interface UserProfile {
   displayName?: string;
   picture?: string;
   about?: string;
+}
+
+export interface ChannelInfo {
+  id: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  createdAt?: number;
 }
 
 export interface DMConversation {

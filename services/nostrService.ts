@@ -201,6 +201,72 @@ export const publishEncryptedDM = async (
   }
 };
 
+export const publishChannelCreate = async (
+  keys: UserKeys,
+  relays: string[],
+  name: string,
+  about?: string
+): Promise<string> => {
+  const _pool = getPool();
+
+  if (!(keys.sk instanceof Uint8Array)) {
+     throw new Error("Invalid Secret Key Type");
+  }
+
+  const eventTemplate = {
+    kind: 40,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [],
+    content: JSON.stringify({ name, about })
+  };
+
+  const signedEvent = finalizeEvent(eventTemplate, keys.sk);
+  if (!validateEvent(signedEvent) || !verifyEvent(signedEvent)) {
+    throw new Error("Failed to validate or verify group create before publish");
+  }
+
+  try {
+    await waitForAny(_pool.publish(relays, signedEvent));
+  } catch (e) {
+    console.error("Failed to publish group create", e);
+    throw e;
+  }
+
+  return signedEvent.id;
+};
+
+export const publishChannelMessage = async (
+  keys: UserKeys,
+  relays: string[],
+  channelId: string,
+  content: string
+): Promise<void> => {
+  const _pool = getPool();
+
+  if (!(keys.sk instanceof Uint8Array)) {
+     throw new Error("Invalid Secret Key Type");
+  }
+
+  const eventTemplate = {
+    kind: 42,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [['e', channelId]],
+    content: content
+  };
+
+  const signedEvent = finalizeEvent(eventTemplate, keys.sk);
+  if (!validateEvent(signedEvent) || !verifyEvent(signedEvent)) {
+    throw new Error("Failed to validate or verify group message before publish");
+  }
+
+  try {
+    await waitForAny(_pool.publish(relays, signedEvent));
+  } catch (e) {
+    console.error("Failed to publish group message", e);
+    throw e;
+  }
+};
+
 export const decryptMessage = async (
   keys: UserKeys,
   pubkey: string, 

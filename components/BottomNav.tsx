@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewState } from '../types';
-import { Globe, MessageSquare, Settings, Users } from 'lucide-react';
+import { Globe, MessageSquare, Settings, Users, Hash } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface BottomNavProps {
@@ -15,7 +15,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ view, setView }) => {
     const isActive =
       view === target ||
       (target === ViewState.DM_LIST && view === ViewState.DM_CHAT) ||
-      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE);
+      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE) ||
+      (target === ViewState.GROUP_LIST && view === ViewState.GROUP_CHAT);
     return (
       <button
         onClick={() => setView(target)}
@@ -33,6 +34,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ view, setView }) => {
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-slate-900 border-t border-slate-800 flex items-center justify-around z-50 md:hidden">
       <NavItem target={ViewState.GLOBAL_CHAT} icon={Globe} label={t('nav.global')} />
       <NavItem target={ViewState.COMMUNITY} icon={Users} label={t('nav.community')} />
+      <NavItem target={ViewState.GROUP_LIST} icon={Hash} label={t('nav.group')} />
       <NavItem target={ViewState.DM_LIST} icon={MessageSquare} label={t('nav.dm')} />
       <NavItem target={ViewState.SETTINGS} icon={Settings} label={t('nav.settings')} />
     </div>

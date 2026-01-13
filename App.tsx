@@ -6,9 +6,11 @@ import ChatInterface from './components/ChatInterface';
 import RelayManager from './components/RelayManager';
 import DMList from './components/DMList';
 import CommunityFeed from './components/CommunityFeed';
+import GroupList from './components/GroupList';
+import GroupChat from './components/GroupChat';
 import CommunityProfile from './components/CommunityProfile';
 import BottomNav from './components/BottomNav';
-import { Globe, MessageSquare, Settings, LogOut, Users } from 'lucide-react';
+import { Globe, MessageSquare, Settings, LogOut, Users, Hash } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 
 const App: React.FC = () => {
@@ -16,6 +18,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewState>(ViewState.LOGIN);
   const [relays, setRelays] = useState<string[]>(DEFAULT_RELAYS);
   const [dmTarget, setDmTarget] = useState<string | undefined>(undefined);
+  const [groupChannelId, setGroupChannelId] = useState<string | undefined>(undefined);
   const { t } = useLanguage();
 
   // Load keys from localStorage on mount
@@ -93,6 +96,11 @@ const App: React.FC = () => {
     setDmTarget(pubkey);
     setView(ViewState.DM_CHAT);
   };
+  
+  const handleSelectChannel = (channelId: string) => {
+    setGroupChannelId(channelId);
+    setView(ViewState.GROUP_CHAT);
+  };
 
   // Render Logic
   if (!keys) {
@@ -119,6 +127,19 @@ const App: React.FC = () => {
             onBack={() => setView(ViewState.COMMUNITY)}
           />
         );
+      case ViewState.GROUP_LIST:
+        return <GroupList keys={keys} relays={relays} onSelectChannel={handleSelectChannel} />;
+      case ViewState.GROUP_CHAT:
+        return groupChannelId ? (
+          <GroupChat
+            keys={keys}
+            relays={relays}
+            channelId={groupChannelId}
+            onBack={() => setView(ViewState.GROUP_LIST)}
+          />
+        ) : (
+          <GroupList keys={keys} relays={relays} onSelectChannel={handleSelectChannel} />
+        );
       case ViewState.DM_LIST:
         return <DMList keys={keys} relays={relays} onSelectContact={handleSelectContact} />;
       case ViewState.DM_CHAT:
@@ -135,7 +156,8 @@ const App: React.FC = () => {
     const isActive =
       view === target ||
       (target === ViewState.DM_LIST && view === ViewState.DM_CHAT) ||
-      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE);
+      (target === ViewState.COMMUNITY && view === ViewState.COMMUNITY_PROFILE) ||
+      (target === ViewState.GROUP_LIST && view === ViewState.GROUP_CHAT);
     return (
       <button
         onClick={() => setView(target)}
@@ -165,6 +187,7 @@ const App: React.FC = () => {
         <nav className="flex-1 space-y-2">
           <SidebarItem target={ViewState.GLOBAL_CHAT} icon={Globe} label={t('nav.global')} />
           <SidebarItem target={ViewState.COMMUNITY} icon={Users} label={t('nav.community')} />
+          <SidebarItem target={ViewState.GROUP_LIST} icon={Hash} label={t('nav.group')} />
           <SidebarItem target={ViewState.DM_LIST} icon={MessageSquare} label={t('nav.dm')} />
           <SidebarItem target={ViewState.SETTINGS} icon={Settings} label={t('nav.settings')} />
         </nav>
