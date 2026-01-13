@@ -32,9 +32,13 @@ export const uploadToR2 = async (file: File): Promise<MessageAttachment> => {
     throw new Error('Invalid upload response');
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': file.type || 'application/octet-stream'
+  };
+
   const uploadRes = await fetch(data.uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    headers,
     body: file
   });
 

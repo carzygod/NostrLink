@@ -42,3 +42,22 @@ Set `VITE_UPLOAD_API_BASE` in the root `.env` to point at this server, e.g.:
 ```
 VITE_UPLOAD_API_BASE=http://localhost:8787
 ```
+
+## CORS (Required)
+Because the browser uploads directly to R2 using a presigned URL, you must
+enable CORS on your R2 bucket. Example rule:
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "http://localhost:5173"],
+    "AllowedMethods": ["PUT", "GET", "HEAD", "OPTIONS"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+If a browser preflight still fails, make sure your CORS rule allows any
+`x-amz-*` headers (or keep `AllowedHeaders: ["*"]`). Some browsers send
+headers like `x-amz-checksum-crc32` and `x-amz-sdk-checksum-algorithm`.
+Apply this rule in the Cloudflare R2 bucket CORS settings (or via `r2` CLI).
