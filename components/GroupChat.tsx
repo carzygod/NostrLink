@@ -21,7 +21,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   const [inputText, setInputText] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [recording, setRecording] = useState(false);
-  const [mediaPicker, setMediaPicker] = useState<'image' | 'video' | null>(null);
+  const [mediaPicker, setMediaPicker] = useState<'image' | 'video' | 'audio' | null>(null);
   const [status, setStatus] = useState<'loading' | 'idle' | 'sending' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
@@ -445,14 +445,6 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
             <Video size={16} />
           </button>
           <button
-            onClick={() => audioInputRef.current?.click()}
-            disabled={status === 'sending'}
-            className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
-            title={t('chat.add_audio')}
-          >
-            <Mic size={16} />
-          </button>
-          <button
             onClick={() => fileInputRef.current?.click()}
             disabled={status === 'sending'}
             className="p-2 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 transition"
@@ -461,14 +453,14 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
             <Paperclip size={16} />
           </button>
           <button
-            onClick={handleRecordingToggle}
+            onClick={() => (recording ? handleRecordingToggle() : setMediaPicker('audio'))}
             disabled={status === 'sending'}
             className={`p-2 rounded-full border transition ${
               recording
                 ? 'bg-red-500/20 border-red-500 text-red-300 hover:text-white'
                 : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500'
             }`}
-            title={recording ? t('chat.stop_recording') : t('chat.record_voice')}
+            title={recording ? t('chat.stop_recording') : t('chat.add_audio')}
           >
             <Mic size={16} />
           </button>
@@ -503,27 +495,37 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 w-full max-w-xs rounded-2xl border border-slate-700 shadow-2xl p-4 space-y-3">
             <h3 className="text-sm font-semibold text-white">
-              {mediaPicker === 'image' ? t('chat.add_image') : t('chat.add_video')}
+              {mediaPicker === 'image'
+                ? t('chat.add_image')
+                : mediaPicker === 'video'
+                  ? t('chat.add_video')
+                  : t('chat.add_audio')}
             </h3>
             <button
               onClick={() => {
                 setMediaPicker(null);
                 if (mediaPicker === 'image') imageInputRef.current?.click();
                 if (mediaPicker === 'video') videoInputRef.current?.click();
+                if (mediaPicker === 'audio') audioInputRef.current?.click();
               }}
               className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 py-2 rounded-lg transition"
             >
-              {t('chat.choose_file')}
+              {mediaPicker === 'audio' ? t('chat.choose_audio') : t('chat.choose_file')}
             </button>
             <button
               onClick={() => {
                 setMediaPicker(null);
                 if (mediaPicker === 'image') imageCameraRef.current?.click();
                 if (mediaPicker === 'video') videoCameraRef.current?.click();
+                if (mediaPicker === 'audio') handleRecordingToggle();
               }}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition"
             >
-              {mediaPicker === 'image' ? t('chat.take_photo') : t('chat.take_video')}
+              {mediaPicker === 'image'
+                ? t('chat.take_photo')
+                : mediaPicker === 'video'
+                  ? t('chat.take_video')
+                  : t('chat.record_voice')}
             </button>
             <button
               onClick={() => setMediaPicker(null)}
