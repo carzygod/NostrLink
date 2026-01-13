@@ -154,7 +154,7 @@ const DMList: React.FC<DMListProps> = ({ keys, relays, onSelectContact }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 w-full relative">
+    <div className="flex flex-col h-full bg-slate-900 w-full relative min-w-0">
        {/* Header */}
        <div className="flex items-center gap-3 p-4 bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-10">
         <div className="bg-emerald-500/20 text-emerald-400 p-2 rounded-full">
@@ -166,7 +166,7 @@ const DMList: React.FC<DMListProps> = ({ keys, relays, onSelectContact }) => {
         </div>
       </div>
 
-      <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-20">
+      <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-20 min-w-0">
         {/* Search / New Chat */}
         <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50 flex gap-2">
             <input

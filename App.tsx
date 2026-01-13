@@ -186,9 +186,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-slate-950 overflow-hidden">
+    <div className="flex h-screen w-screen bg-slate-950 overflow-hidden min-w-0">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-slate-800 bg-slate-900 p-4">
+      <aside className="hidden md:flex flex-col w-64 border-r border-slate-800 bg-slate-900 p-4 flex-shrink-0">
         <div className="mb-8 px-2 flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
              <span className="text-white font-bold text-lg">N</span>
@@ -220,7 +220,7 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative w-full h-full">
+      <main className="flex-1 flex flex-col relative w-full h-full min-w-0 overflow-hidden">
         {renderContent()}
       </main>
 

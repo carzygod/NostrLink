@@ -142,7 +142,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays, onOpenProfi
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 w-full relative">
+    <div className="flex flex-col h-full bg-slate-950 w-full relative min-w-0">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-10">
         <div>
@@ -159,7 +159,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ keys, relays, onOpenProfi
       </div>
 
       {/* Feed List */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar min-w-0">
         {loading && events.length === 0 && (
            <div className="flex flex-col items-center justify-center py-10 gap-3">
              <Loader2 className="animate-spin text-indigo-500" />

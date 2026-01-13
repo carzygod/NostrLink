@@ -159,7 +159,7 @@ const GroupList: React.FC<GroupListProps> = ({ keys, relays, onSelectChannel }) 
   const listToRender = activeTab === 'public' ? sortedChannels : joinedList;
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 w-full relative">
+    <div className="flex flex-col h-full bg-slate-900 w-full relative min-w-0">
       <div className="flex items-center gap-3 p-4 bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-10">
         <div className="bg-indigo-500/20 text-indigo-400 p-2 rounded-full">
           <Users size={20} />
@@ -170,7 +170,7 @@ const GroupList: React.FC<GroupListProps> = ({ keys, relays, onSelectChannel }) 
         </div>
       </div>
 
-      <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-20">
+      <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-20 min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setActiveTab('public')}

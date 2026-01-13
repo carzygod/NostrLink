@@ -161,7 +161,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
   const displayName = channelInfo?.name || t('group.unnamed');
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 w-full relative">
+    <div className="flex flex-col h-full bg-slate-900 w-full relative min-w-0">
       <div className="flex items-center gap-3 p-4 bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-10 shadow-sm">
         <button
           onClick={onBack}
@@ -183,7 +183,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ keys, relays, channelId, onBack }
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-4 min-w-0">
         {status === 'loading' && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 text-indigo-400 space-y-3">
             <Loader2 size={32} className="animate-spin" />
